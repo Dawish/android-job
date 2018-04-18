@@ -589,7 +589,7 @@ public final class JobRequest {
     @Override
     public String toString() {
 
-        return "request{id=" + getJobId() + ", onlyId=" + getOnlyId() + ", tag=" + getTag() + ", transient=" + isTransient() + '}';
+        return "request{id=" + getJobId() + ", onlyId=" + getOnlyId() + ", tag=" + getTag() + " ,startTime=" + getStartMs() + ", transient=" + isTransient() + '}';
     }
 
     /**

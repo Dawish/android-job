@@ -227,12 +227,6 @@ public class MainActivity extends Activity {
             Log.d("danxx","ID size : "+jobRequestSetId.size());
             Log.d("danxx","ID content : "+jobRequestSetId.toString());
         }
-
-        Set<JobRequest> jobRequestSet = mJobManager.getAllJobRequestsForTag(DemoSyncJob.TAG);
-        if(jobRequestSet!=null){
-            Log.d("danxx","size : "+jobRequestSet.size());
-            Log.d("danxx","content : "+jobRequestSet.toString());
-        }
     }
 
     private void testAllImpl() {
