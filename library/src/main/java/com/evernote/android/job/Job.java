@@ -388,6 +388,7 @@ public abstract class Job {
         public String getOnlyId() {
             return mRequest.getOnlyId();
         }
+
         /**
          * @return The tag for this {@link Job} which was passed in the constructor of the {@link JobRequest.Builder}.
          * @see JobRequest#getTag()
