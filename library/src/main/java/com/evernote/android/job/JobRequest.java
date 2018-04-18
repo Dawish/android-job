@@ -148,7 +148,7 @@ public final class JobRequest {
      * @return The unique ID for this job.
      */
     public int getJobId() {
-        return mBuilder.mId;
+        return mBuilder.mAutoId;
     }
 
     /**
@@ -175,6 +175,14 @@ public final class JobRequest {
      */
     public long getEndMs() {
         return mBuilder.mEndMs;
+    }
+
+    /**
+     * 获取可用的唯一id
+     * @return
+     */
+    public String getOnlyId(){
+        return mBuilder.mOnlyId;
     }
 
     /**
@@ -545,6 +553,10 @@ public final class JobRequest {
         return contentValues;
     }
 
+    /**
+     * 通过Cursor从数据库获取一个JobRequest
+     * @return
+     */
     /*package*/ static JobRequest fromCursor(Cursor cursor) {
         JobRequest request = new Builder(cursor).build();
         request.mFailureCount = cursor.getInt(cursor.getColumnIndex(JobStorage.COLUMN_NUM_FAILURES));
@@ -576,7 +588,8 @@ public final class JobRequest {
 
     @Override
     public String toString() {
-        return "request{id=" + getJobId() + ", tag=" + getTag() + ", transient=" + isTransient() + '}';
+
+        return "request{id=" + getJobId() + ", onlyId=" + getOnlyId() + ", tag=" + getTag() + ", transient=" + isTransient() + '}';
     }
 
     /**
@@ -587,7 +600,9 @@ public final class JobRequest {
 
         private static final int CREATE_ID = -8765; // magic number
 
-        private int mId;
+        private int mAutoId;
+        /**job可以被设置的唯一id*/
+        private String mOnlyId;
         final String mTag;
 
         private long mStartMs;
@@ -630,7 +645,8 @@ public final class JobRequest {
          */
         public Builder(@NonNull String tag) {
             mTag = JobPreconditions.checkNotEmpty(tag);
-            mId = CREATE_ID;
+            mAutoId = CREATE_ID;
+            mOnlyId = "empty_OnlyId";
 
             mStartMs = -1;
             mEndMs = -1;
@@ -641,10 +657,15 @@ public final class JobRequest {
             mNetworkType = DEFAULT_NETWORK_TYPE;
         }
 
+        /**
+         * 通过Cursor创建一个JobRequest
+         * @param cursor
+         */
         @SuppressWarnings("unchecked")
         private Builder(Cursor cursor) {
-            mId = cursor.getInt(cursor.getColumnIndex(JobStorage.COLUMN_ID));
+            mAutoId = cursor.getInt(cursor.getColumnIndex(JobStorage.COLUMN_ID));
             mTag = cursor.getString(cursor.getColumnIndex(JobStorage.COLUMN_TAG));
+            mOnlyId = cursor.getString(cursor.getColumnIndex(JobStorage.COLUMN_ONLY_ID));
 
             mStartMs = cursor.getLong(cursor.getColumnIndex(JobStorage.COLUMN_START_MS));
             mEndMs = cursor.getLong(cursor.getColumnIndex(JobStorage.COLUMN_END_MS));
@@ -683,8 +704,9 @@ public final class JobRequest {
         }
 
         private Builder(@NonNull Builder builder, boolean createId) {
-            mId = createId ? CREATE_ID : builder.mId;
+            mAutoId = createId ? CREATE_ID : builder.mAutoId;
             mTag = builder.mTag;
+            mOnlyId = "empty_OnlyId";
 
             mStartMs = builder.mStartMs;
             mEndMs = builder.mEndMs;
@@ -712,8 +734,9 @@ public final class JobRequest {
         }
 
         private void fillContentValues(ContentValues contentValues) {
-            contentValues.put(JobStorage.COLUMN_ID, mId);
+            contentValues.put(JobStorage.COLUMN_ID, mAutoId);
             contentValues.put(JobStorage.COLUMN_TAG, mTag);
+            contentValues.put(JobStorage.COLUMN_ONLY_ID, mOnlyId);
 
             contentValues.put(JobStorage.COLUMN_START_MS, mStartMs);
             contentValues.put(JobStorage.COLUMN_END_MS, mEndMs);
@@ -800,6 +823,11 @@ public final class JobRequest {
             } else {
                 mExtras = new PersistableBundleCompat(extras);
             }
+            return this;
+        }
+
+        public Builder setOnlyId(@NonNull String onlyId) {
+            mOnlyId = onlyId;
             return this;
         }
 
@@ -1114,6 +1142,8 @@ public final class JobRequest {
          */
         public JobRequest build() {
             JobPreconditions.checkNotEmpty(mTag);
+            /**检测我们要的job唯一可用id不为空null*/
+            JobPreconditions.checkNotEmpty(mOnlyId);
             JobPreconditions.checkArgumentPositive(mBackoffMs, "backoffMs must be > 0");
             JobPreconditions.checkNotNull(mBackoffPolicy);
             JobPreconditions.checkNotNull(mNetworkType);
@@ -1159,14 +1189,14 @@ public final class JobRequest {
                 CAT.w("Warning: job with tag %s scheduled over a year in the future", mTag);
             }
 
-            if (mId != CREATE_ID) {
-                JobPreconditions.checkArgumentNonnegative(mId, "id can't be negative");
+            if (mAutoId != CREATE_ID) {
+                JobPreconditions.checkArgumentNonnegative(mAutoId, "id can't be negative");
             }
 
             Builder builder = new Builder(this);
-            if (mId == CREATE_ID) {
-                builder.mId = JobManager.instance().getJobStorage().nextJobId();
-                JobPreconditions.checkArgumentNonnegative(builder.mId, "id can't be negative");
+            if (mAutoId == CREATE_ID) {
+                builder.mAutoId = JobManager.instance().getJobStorage().nextJobId();
+                JobPreconditions.checkArgumentNonnegative(builder.mAutoId, "id can't be negative");
             }
 
             return new JobRequest(builder);
@@ -1179,12 +1209,12 @@ public final class JobRequest {
 
             Builder builder = (Builder) o;
 
-            return mId == builder.mId;
+            return mAutoId == builder.mAutoId;
         }
 
         @Override
         public int hashCode() {
-            return mId;
+            return mAutoId;
         }
     }
 

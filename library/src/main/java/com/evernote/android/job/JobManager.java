@@ -435,6 +435,21 @@ public final class JobManager {
     }
 
     /**
+     *
+     * @param onlyId
+     * @param includeStarted
+     * @return
+     */
+    public boolean isExistByOnlyId(String onlyId, boolean includeStarted){
+        return mJobStorage == null ? false : mJobStorage.isExistByOnlyId(onlyId, includeStarted);
+    }
+
+    public Set<JobRequest> getJobRequestByOnlyId(String onlyId, boolean includeStarted){
+        return mJobStorage == null ? null : mJobStorage.getJobRequestByOnlyId(onlyId, includeStarted);
+    }
+
+
+    /**
      * Registers this instance to create jobs for a specific tag. It's possible to have multiple
      * {@link JobCreator}s with a first come first serve order.
      *

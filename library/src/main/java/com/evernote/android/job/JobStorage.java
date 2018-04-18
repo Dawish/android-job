@@ -52,6 +52,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * @author rwondratschek
+ * @Desc 二级缓存来存储JobRequest，LruCache内存缓存 ,sqlite文件缓存
+ *        存储一个JobRequest是先存到SQLite 然后在更新到LruCache内存缓存
+ *        获取一个JobRequest是先从LruCache内存缓存获取，没有再从SQLite获取
  */
 @SuppressWarnings("WeakerAccess")
 /*package*/ class JobStorage {
@@ -67,7 +70,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
     public static final String JOB_TABLE_NAME = "jobs";
 
+    /**库内自己维护的id唯一存在，数据库主键*/
     public static final String COLUMN_ID = "_id";
+    /**用户自己设置的id，可能重复存在*/
+    public static final String COLUMN_ONLY_ID = "onlyId";
     public static final String COLUMN_TAG = "tag";
     public static final String COLUMN_START_MS = "startMs";
     public static final String COLUMN_END_MS = "endMs";
@@ -105,9 +111,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
     private static final String WHERE_NOT_STARTED = "ifnull(" + COLUMN_STARTED + ", 0)<=0";
 
     private final SharedPreferences mPreferences;
+    /**通过id从SQLite数据库获取jobRequest*/
     private final JobCacheId mCacheId;
 
     private AtomicInteger mJobCounter;
+    /**已经被删除的id*/
     private final Set<String> mFailedDeleteIds;
 
     private final JobOpenHelper mDbHelper;
@@ -175,6 +183,133 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
         } finally {
             mLock.readLock().unlock();
         }
+    }
+
+
+    /**
+     *
+     * @param onlyId
+     * @param includeStarted
+     * @return
+     */
+    public boolean isExistByOnlyId(String onlyId, boolean includeStarted){
+
+        boolean isExist = false;
+
+        SQLiteDatabase database = null;
+        Cursor cursor = null;
+
+        mLock.readLock().lock();
+
+        try {
+            String where; // filter started requests
+            String[] args;
+            if (TextUtils.isEmpty(onlyId)) {
+                where = includeStarted ? null : WHERE_NOT_STARTED;
+                args = null;
+            } else {
+                where = includeStarted ? "" : (WHERE_NOT_STARTED + " AND ");
+                where += COLUMN_ONLY_ID + "=?";
+                args = new String[]{onlyId};
+            }
+
+            database = getDatabase();
+            cursor = database.query(JOB_TABLE_NAME, null, where, args, null, null, null);
+
+            @SuppressLint("UseSparseArrays")
+            HashMap<Integer, JobRequest> cachedRequests = new HashMap<>(mCacheId.snapshot());
+
+            while (cursor != null && cursor.moveToNext()) {
+                // check in cache first, can avoid creating many JobRequest objects
+                Integer autoId = cursor.getInt(cursor.getColumnIndex(COLUMN_ID));
+                /**没有被删除过*/
+                if (!didFailToDelete(autoId)) {
+                    /**内存缓存中已经存在*/
+                    if (cachedRequests.containsKey(autoId)) {
+                        isExist = true;
+                        break;
+                    } else {
+                        /**内存缓存中不存在就从数据库中获取*/
+                        String tempOnlyId = cursor.getString(cursor.getColumnIndex(COLUMN_ONLY_ID));
+                        if(tempOnlyId.equals(onlyId)){
+                            isExist = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            CAT.e(e, "could not load all jobs");
+
+        } finally {
+            closeCursor(cursor);
+            closeDatabase(database);
+            mLock.readLock().unlock();
+        }
+
+        return isExist;
+    }
+
+    /**
+     * 通过自己添加的唯一id来查找JobRequest
+     * @param onlyId
+     * @param includeStarted
+     * @return
+     */
+    public Set<JobRequest> getJobRequestByOnlyId(@NonNull String onlyId, boolean includeStarted){
+        JobRequest jobRequest = null;
+
+        Set<JobRequest> result = new HashSet<>();
+
+        SQLiteDatabase database = null;
+        Cursor cursor = null;
+
+        mLock.readLock().lock();
+
+        try {
+            String where; // filter started requests
+            String[] args;
+            if (TextUtils.isEmpty(onlyId)) {
+                where = includeStarted ? null : WHERE_NOT_STARTED;
+                args = null;
+            } else {
+                where = includeStarted ? "" : (WHERE_NOT_STARTED + " AND ");
+                where += COLUMN_ONLY_ID + "=?";
+                args = new String[]{onlyId};
+            }
+
+            database = getDatabase();
+            cursor = database.query(JOB_TABLE_NAME, null, where, args, null, null, null);
+
+            @SuppressLint("UseSparseArrays")
+            HashMap<Integer, JobRequest> cachedRequests = new HashMap<>(mCacheId.snapshot());
+
+            while (cursor != null && cursor.moveToNext()) {
+                // check in cache first, can avoid creating many JobRequest objects
+                Integer autoId = cursor.getInt(cursor.getColumnIndex(COLUMN_ID));
+                /**没有被删除过*/
+                if (!didFailToDelete(autoId)) {
+                    /**内存缓存中已经存在*/
+                    if (cachedRequests.containsKey(autoId)) {
+                        result.add(cachedRequests.get(autoId));
+                    } else {
+                        /**内存缓存中不存在就从数据库中获取*/
+                        result.add(JobRequest.fromCursor(cursor));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            CAT.e(e, "could not load all jobs");
+
+        } finally {
+            closeCursor(cursor);
+            closeDatabase(database);
+            mLock.readLock().unlock();
+        }
+
+        return result;
+
+//        return jobRequest;
     }
 
     public Set<JobRequest> getAllJobRequests(@Nullable String tag, boolean includeStarted) {
@@ -290,6 +425,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
         }
     }
 
+    /**
+     * 通过自己生成的id从SQLite中获取一个JobRequest
+     * @param id
+     * @param includeStarted
+     * @return
+     */
     @SuppressWarnings("SameParameterValue")
     private JobRequest load(int id, boolean includeStarted) {
         if (didFailToDelete(id)) {
@@ -374,6 +515,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
         return Math.max(JobConfig.getJobIdOffset(), Math.max(jobId, mPreferences.getInt(JOB_ID_COUNTER, 0)));
     }
 
+    /**
+     * job移除后保存job的自动生成的id
+     * @param id
+     */
     private void addFailedDeleteId(int id) {
         synchronized (mFailedDeleteIds) {
             mFailedDeleteIds.add(String.valueOf(id));
@@ -381,6 +526,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
         }
     }
 
+    /**
+     *
+     * @param id
+     * @return
+     */
     private boolean didFailToDelete(int id) {
         synchronized (mFailedDeleteIds) {
             return !mFailedDeleteIds.isEmpty() && mFailedDeleteIds.contains(String.valueOf(id));
@@ -501,6 +651,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
                     + COLUMN_EXACT + " integer, "
                     + COLUMN_NETWORK_TYPE + " text not null, "
                     + COLUMN_EXTRAS + " text, "
+                    + COLUMN_ONLY_ID + " text, "
                     + COLUMN_NUM_FAILURES + " integer, "
                     + COLUMN_SCHEDULED_AT + " integer, "
                     + COLUMN_STARTED + " integer, "

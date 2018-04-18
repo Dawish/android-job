@@ -11,12 +11,15 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.CompoundButton;
 import android.widget.Spinner;
+import android.widget.Toast;
 
 import com.evernote.android.job.JobConfig;
 import com.evernote.android.job.JobManager;
 import com.evernote.android.job.JobRequest;
 import com.evernote.android.job.JobApi;
 import com.evernote.android.job.util.support.PersistableBundleCompat;
+
+import java.util.Set;
 
 /**
  * @author rwondratschek
@@ -194,13 +197,19 @@ public class MainActivity extends Activity {
         }
     }
 
+    String onlyId = "123423423:2342:23";
+
     private void testSimple() {
+
+        mJobManager.getJobRequestByOnlyId(onlyId, true);
+
         PersistableBundleCompat extras = new PersistableBundleCompat();
         extras.putString("key", "Hello world");
 
         mLastJobId = new JobRequest.Builder(DemoSyncJob.TAG)
-                .setExecutionWindow(3_000L, 4_000L)
-                .setBackoffCriteria(5_000L, JobRequest.BackoffPolicy.LINEAR)
+                .setExecutionWindow(23_000L, 24_000L)
+                .setBackoffCriteria(25_000L, JobRequest.BackoffPolicy.LINEAR)
+                .setOnlyId("123423423:2342:23")
                 .setRequiresCharging(mRequiresCharging.isChecked())
                 .setRequiresDeviceIdle(mRequiresDeviceIdle.isChecked())
                 .setRequiredNetworkType(JobRequest.NetworkType.values()[mNetworkTypeSpinner.getSelectedItemPosition()])
@@ -208,6 +217,22 @@ public class MainActivity extends Activity {
                 .setRequirementsEnforced(true)
                 .build()
                 .schedule();
+
+        if(mJobManager.isExistByOnlyId("empty_OnlyId", true)){
+            Toast.makeText(MainActivity.this, onlyId + " 任务已经存在了哦", Toast.LENGTH_SHORT).show();
+        }
+
+        Set<JobRequest> jobRequestSetId = mJobManager.getJobRequestByOnlyId(onlyId, true);
+        if(jobRequestSetId!=null){
+            Log.d("danxx","ID size : "+jobRequestSetId.size());
+            Log.d("danxx","ID content : "+jobRequestSetId.toString());
+        }
+
+        Set<JobRequest> jobRequestSet = mJobManager.getAllJobRequestsForTag(DemoSyncJob.TAG);
+        if(jobRequestSet!=null){
+            Log.d("danxx","size : "+jobRequestSet.size());
+            Log.d("danxx","content : "+jobRequestSet.toString());
+        }
     }
 
     private void testAllImpl() {
