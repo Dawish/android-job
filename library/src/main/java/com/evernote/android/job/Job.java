@@ -382,6 +382,13 @@ public abstract class Job {
         }
 
         /**
+         * 获取自定义的id
+         * @return
+         */
+        public String getOnlyId() {
+            return mRequest.getOnlyId();
+        }
+        /**
          * @return The tag for this {@link Job} which was passed in the constructor of the {@link JobRequest.Builder}.
          * @see JobRequest#getTag()
          */

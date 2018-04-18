@@ -22,6 +22,11 @@ public class App extends Application {
         JobManager.create(this).addJobCreator(new DemoJobCreator());
 
         Set<JobRequest> jobRequests = JobManager.instance().getAllJobRequests();
+
+        for(JobRequest jobRequest : jobRequests){
+            Log.d("danxx","StartMs : "+jobRequest.getStartMs());
+        }
+
         if(jobRequests != null){
             Log.d("danxx","dataBase Size :" + jobRequests.size());
         }
