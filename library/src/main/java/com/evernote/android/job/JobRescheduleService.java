@@ -6,6 +6,7 @@ import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.annotation.VisibleForTesting;
 import android.support.v4.app.JobIntentService;
+import android.util.Log;
 
 import com.evernote.android.job.util.JobCat;
 
@@ -17,7 +18,7 @@ import java.util.concurrent.CountDownLatch;
  * This service reschedules your jobs in case this should be necessary. Usually rescheduling is necessary
  * after a reboot. If you don't want that your jobs are rescheduled, then you should use a transient job
  * or cancel your job manually.
- *  在设备重启后重新编排job的开始时间
+ * 在设备重启后重新编排job的开始时间
  * @author rwondratschek
  */
 public final class JobRescheduleService extends JobIntentService {
@@ -26,6 +27,7 @@ public final class JobRescheduleService extends JobIntentService {
 
     /*package*/ static void startService(Context context) {
         try {
+            Log.d("danxx", "JobRescheduleService startService");
             enqueueWork(context, JobRescheduleService.class, JobIdsInternal.JOB_ID_JOB_RESCHEDULE_SERVICE, new Intent());
             latch = new CountDownLatch(1);
         } catch (Exception e) {
