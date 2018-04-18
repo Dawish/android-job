@@ -706,7 +706,7 @@ public final class JobRequest {
         private Builder(@NonNull Builder builder, boolean createId) {
             mAutoId = createId ? CREATE_ID : builder.mAutoId;
             mTag = builder.mTag;
-            mOnlyId = "empty_OnlyId";
+            mOnlyId = builder.mOnlyId;
 
             mStartMs = builder.mStartMs;
             mEndMs = builder.mEndMs;
