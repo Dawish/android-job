@@ -28,11 +28,12 @@ package com.evernote.android.job;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 
 /**
  * A {@code BroadcastReceiver} rescheduling jobs after a reboot, if the underlying {@link JobApi} can't
  * handle it.
- *
+ *  设备重启后重新启动JobManager开始所有任务的处理
  * @author rwondratschek
  */
 public final class JobBootReceiver extends BroadcastReceiver {
@@ -45,6 +46,7 @@ public final class JobBootReceiver extends BroadcastReceiver {
          * wasn't registered, yet. Apps / Libraries need to figure out how to solve this themselves.
          */
         try {
+            Log.d("danxx", "JobBootReceiver to create JobManager");
             JobManager.create(context);
         } catch (JobManagerCreateException ignored) {
         }

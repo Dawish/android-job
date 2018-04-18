@@ -17,7 +17,7 @@ import java.util.concurrent.CountDownLatch;
  * This service reschedules your jobs in case this should be necessary. Usually rescheduling is necessary
  * after a reboot. If you don't want that your jobs are rescheduled, then you should use a transient job
  * or cancel your job manually.
- *
+ *  在设备重启后重新编排job的开始时间
  * @author rwondratschek
  */
 public final class JobRescheduleService extends JobIntentService {

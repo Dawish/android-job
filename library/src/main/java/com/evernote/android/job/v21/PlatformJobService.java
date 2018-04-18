@@ -52,6 +52,7 @@ public class PlatformJobService extends JobService {
 
     @Override
     public boolean onStartJob(final JobParameters params) {
+
         JobConfig.getExecutorService().execute(new Runnable() {
             @Override
             public void run() {

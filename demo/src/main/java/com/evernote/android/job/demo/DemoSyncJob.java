@@ -10,6 +10,7 @@ import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
+import android.util.Log;
 
 import com.evernote.android.job.Job;
 
@@ -27,6 +28,8 @@ public class DemoSyncJob extends Job {
     protected Result onRunJob(@NonNull final Params params) {
         boolean success = new DemoSyncEngine(getContext()).sync();
 
+
+
         PendingIntent pendingIntent = PendingIntent.getActivity(getContext(), 0, new Intent(getContext(), MainActivity.class), 0);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -34,6 +37,8 @@ public class DemoSyncJob extends Job {
             channel.setDescription("Job demo job");
             getContext().getSystemService(NotificationManager.class).createNotificationChannel(channel);
         }
+
+        Log.d("danxx", "关机/退出了依旧在执行 : "+params.getOnlyId());
 
         Notification notification = new NotificationCompat.Builder(getContext(), TAG)
                 .setContentTitle("ID " + params.getId())

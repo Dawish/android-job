@@ -207,8 +207,8 @@ public class MainActivity extends Activity {
         extras.putString("key", "Hello world");
 
         mLastJobId = new JobRequest.Builder(DemoSyncJob.TAG)
-                .setExecutionWindow(23_000L, 24_000L)
-                .setBackoffCriteria(25_000L, JobRequest.BackoffPolicy.LINEAR)
+                .setExecutionWindow(60_000L, 61_000L)
+                .setBackoffCriteria(62_000L, JobRequest.BackoffPolicy.LINEAR)
                 .setOnlyId("123423423:2342:23")
                 .setRequiresCharging(mRequiresCharging.isChecked())
                 .setRequiresDeviceIdle(mRequiresDeviceIdle.isChecked())
